@@ -13,7 +13,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Conexión con MongoDB utilizando la URI desde .env
-const dbURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/urlShortener';
+const dbURI = process.env.MONGODB_URI;
 mongoose.connect(dbURI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -23,18 +23,21 @@ mongoose.connect(dbURI, {
   console.error('Failed to connect to MongoDB', error);
 });
 
+// Definición del esquema de URL
 const urlSchema = new mongoose.Schema({
   originalUrl: String,
   shortUrl: String,
   shortCode: String
 });
 
+// Creación del modelo de URL
 const Url = mongoose.model('Url', urlSchema);
 
 // Endpoint para acortar URL
 app.post('/shorten', async (req, res) => {
   const { originalUrl } = req.body;
   const shortCode = shortid.generate();
+  // Generar la URL corta utilizando el protocolo y el host actual
   const shortUrl = `${req.protocol}://${req.get('host')}/${shortCode}`;
 
   const url = new Url({
@@ -66,6 +69,7 @@ app.get('/:shortCode', async (req, res) => {
   }
 });
 
+// Iniciar el servidor
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on http://${process.env.HOST}:${PORT}`);
 });
