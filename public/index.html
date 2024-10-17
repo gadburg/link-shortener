@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+</head>
+<body class="bg-gray-300 flex items-center justify-center min-h-screen">
+
+    <div class="bg-white p-8 rounded-lg shadow-lg max-w-lg w-full text-center">
+      <h1 class="text-4xl font-bold mb-8 text-gray-800">Acortador URL</h1>
+      <p class="mb-6 text-gray-600">Acorta tus URL de forma facil y rapida</p>
+      <form id="shorten-form" class="flex flex-col items-center gap-4">
+        <input type="text" id="original-url" placeholder="Enter URL" class="p-3 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        <button type="submit" class="bg-blue-500 text-white py-2 px-6 rounded-lg hover:bg-blue-600 transition duration-300">Acortar</button>
+      </form>
+      <p id="error-message" class="mt-4 text-red-500 hidden">Por favor usa una URL valida.</p>
+      <div id="result" class="mt-6 hidden flex flex-col items-center">
+        <p class="mb-2 text-gray-600">Tu URL acortada:</p>
+        <a id="short-url" class="text-blue-500 text-lg font-medium" href="#" target="_blank"></a>
+        <canvas id="qrcode" class="mt-4"></canvas>
+        <button id="download-qr" class="mt-4 bg-green-500 text-white py-2 px-6 rounded-lg hover:bg-green-600 transition duration-300">Descargar QR</button>
+        <button id="share-whatsapp" class="mt-4 bg-green-500 text-white py-2 px-6 rounded-lg hover:bg-green-600 transition duration-300">Compartir en Whatsapp</button>
+      </div>
+    </div>
+  
+    <script>
+        //funcion para validar la url, recibe la url y la compara con el pattern, retorna el resultado
+      function isValidUrl(url) {
+        const pattern = /^(https?:\/\/)?(www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,6}(\:[0-9]{1,5})?(\/[^\s]*)?$/;
+        return pattern.test(url);
+      }
+  
+      //evento del boton para recortar la url
+      document.getElementById('shorten-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const originalUrl = document.getElementById('original-url').value;
+        const errorMessage = document.getElementById('error-message');
+        
+        //comprobamos si es url valida
+        if (!isValidUrl(originalUrl)) {
+          errorMessage.classList.remove('hidden');
+          return;
+        }
+        
+        errorMessage.classList.add('hidden');
+  
+        //solicitamos al servidor la url recortada
+        const response = await fetch('/shorten', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ originalUrl })
+        });
+        //esperamos la respuesta
+        const data = await response.json();
+        //mostramos el resultado
+        const shortUrlElement = document.getElementById('short-url');
+        shortUrlElement.innerText = data.shortUrl;
+        shortUrlElement.href = data.shortUrl;
+        document.getElementById('result').classList.remove('hidden');
+  
+        //generamos el codigo qr
+        const qrCodeCanvas = document.getElementById('qrcode');
+        QRCode.toCanvas(qrCodeCanvas, data.shortUrl, function (error) {
+          if (error) console.error(error);
+          console.log('QR code generated!');
+        });
+      });
+  
+      //añadimos evento al boton para descargar el qr
+      document.getElementById('download-qr').addEventListener('click', () => {
+        const qrCodeCanvas = document.getElementById('qrcode');
+        const qrCodeImage = qrCodeCanvas.toDataURL('image/png');
+        const downloadLink = document.createElement('a');
+        downloadLink.href = qrCodeImage;
+        downloadLink.download = 'qr-code.png';
+        downloadLink.click();
+      });
+  
+      //añadimos el evento para compartir por whatsapp
+      document.getElementById('share-whatsapp').addEventListener('click', () => {
+        const shortUrl = document.getElementById('short-url').href;
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shortUrl)}`;
+        window.open(whatsappUrl, '_blank');
+      });
+    </script>
+  
+  </body>
+</html>
